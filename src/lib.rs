@@ -229,5 +229,79 @@ impl ConstantSumCurve {
     }
 }
 
+/// Unit tests
 #[cfg(test)]
-mod test {}
+mod tests {
+    use alloy_primitives::{address, uint, Address};
+    use motsu::prelude::Contract;
+
+    use super::*;
+
+    const CURRENCY_1: Address = address!("A11CEacF9aa32246d767FCCD72e02d6bCbcC375d");
+    const CURRENCY_2: Address = address!("B0B0cB49ec2e96DF5F5fFB081acaE66A2cBBc2e2");
+
+    #[test]
+    fn sample_test() {
+        assert_eq!(4, 2 + 2);
+    }
+
+    #[motsu::test]
+    fn calculates_amount_in(contract: Contract<ConstantSumCurve>, alice: Address) {
+        let amount_out = uint!(1_U256);
+        let expected_amount_in = amount_out; // 1:1 swap
+        let amount_in = contract
+            .sender(alice)
+            .calculate_amount_in(amount_out, CURRENCY_1, CURRENCY_2, true);
+        assert_eq!(expected_amount_in, amount_in);
+    }
+
+    #[motsu::test]
+    fn calculates_amount_out(contract: Contract<ConstantSumCurve>, alice: Address) {
+        let amount_in = uint!(2_U256);
+        let expected_amount_out = amount_in; // 1:1 swap
+        let amount_out = contract
+            .sender(alice)
+            .calculate_amount_out(amount_in, CURRENCY_1, CURRENCY_2, true);
+        assert_eq!(expected_amount_out, amount_out);
+    }
+
+    #[motsu::test]
+    fn returns_amount_in_for_exact_output(contract: Contract<ConstantSumCurve>, alice: Address) {
+        let amount_out = uint!(1_U256);
+        let expected_amount_in = amount_out; // 1:1 swap
+        let zero_for_one = true;
+        let amount_in = contract
+            .sender(alice)
+            .get_amount_in_for_exact_output(amount_out, CURRENCY_1, CURRENCY_2, zero_for_one)
+            .expect("should calculate `amount_in`");
+        assert_eq!(expected_amount_in, amount_in);
+
+        // Assert emitted events.
+        contract.assert_emitted(&AmountInCalculated {
+            amount_out,
+            input: CURRENCY_1,
+            output: CURRENCY_2,
+            zero_for_one,
+        });
+    }
+
+    #[motsu::test]
+    fn returns_amount_out_from_exact_input(contract: Contract<ConstantSumCurve>, alice: Address) {
+        let amount_in = uint!(2_U256);
+        let expected_amount_out = amount_in; // 1:1 swap
+        let zero_for_one = true;
+        let amount_out = contract
+            .sender(alice)
+            .get_amount_out_from_exact_input(amount_in, CURRENCY_1, CURRENCY_2, zero_for_one)
+            .expect("should calculate `amount_out`");
+        assert_eq!(expected_amount_out, amount_out);
+
+        // Assert emitted events.
+        contract.assert_emitted(&AmountOutCalculated {
+            amount_in,
+            input: CURRENCY_1,
+            output: CURRENCY_2,
+            zero_for_one,
+        });
+    }
+}
